@@ -1,0 +1,27 @@
+
+Preprocessing_signal.m
+1. Displaying the signal and its spectrum (both single and double sided)
+2. Filtering using notch, hipass and bandpass filters
+3. Saving the processed signals
+
+Postprocessing_signal.m
+1. Loading the saved processed signal 
+2. Displaying it with actual and detected qrs
+3. Calculating TP, FP, TN, FN, Sensitivity, Speificity, PPV and PNV
+4. Displaying the calculated result
+
+Main_Lab_22106178: It performs combined task of Preprocessing.m and Postprocessing.m
+
+Myfft.m: A function to display the double sided spectrum and single sided spectrum of a given signal
+
+notch.m: A function of Notch filter
+
+Remove_the_DC.m: A function of high pass filter
+
+bandpass.m: A function of bandpass filter
+
+SNR_from_spectrum.m: A function to calculate the Signal to noise ratio in dB
+
+Data folder: Stores the downloaded data and annotations
+
+IntermediateSignals folder: Stores all the processed signals

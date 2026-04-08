@@ -1,0 +1,64 @@
+%% 1 Postprocessing
+
+%To find the R peak
+load('IntermediateSignals/D_BandPass_filter_result.mat');
+[pks, lks] = findpeaks(final_signal, 'MinPeakDistance', 224);
+figure;
+plot(tm, final_signal);                                                       % signal
+hold on
+plot(tm(ann), final_signal(ann), 'k*');                                       % ground truth displayed with black *
+plot(tm(lks), final_signal(lks), 'r*');                                       % detected peaks displayed with red *
+hold off
+%xlim([0 30])
+
+legend('Filtered Signal', 'Ground Truth (Downloaded Annotation)', 'Detected R-peaks');
+
+xlabel('Time (s)');
+ylabel('Amplitude');
+title('QRS Detection Result');
+
+%% 2 Calculating True positive (TP), false positive (FP)  and false negative (FN)
+
+true_peaks = ann;     % ground truth
+detected_peaks = lks; % your detected peaks
+
+tolerance = round(0.15 * fs);   % 150 ms tolerance
+
+TP = 0;
+
+matched = zeros(length(true_peaks),1);                                     %make a zero matrix of dimension truepeaklength x 1
+
+% To detect true positive
+for i = 1:length(detected_peaks)
+    d = detected_peaks(i);
+    
+    % find closest annotation
+    diff = abs(true_peaks - d);
+    [min_diff, idx] = min(diff);
+    
+    if min_diff <= tolerance && matched(idx) == 0
+        TP = TP + 1;                       %increase the count if detected qrs matches doctor annotation
+        matched(idx) = 1;                  % mark as matched
+    end
+end
+
+FP=length(detected_peaks)-TP;               % false positive= number of qrs detected -true positive
+FN=length(true_peaks)-TP;                   % false negative= number of annotation - true positive
+Total_samples = length(final_signal);             % to get total samples
+TN = Total_samples - TP - FP - FN;          % total sample= TP+TN+FP+FN
+%% 3. Calculating Sensitivity, Specificity, positive predictive value or the negative predictive value
+
+Sensitivity = TP / (TP + FN);
+Specificity = TN / (TN + FP);
+PPV = TP / (TP + FP);
+PNV = TN/ (TN + FN);
+%% 4. Displaying the results
+fprintf('\n--- Performance ---\n');
+fprintf('TP = %d\n', TP);
+fprintf('FP = %d\n', FP);
+fprintf('FN = %d\n', FN);
+fprintf('TN = %d\n', TN);
+fprintf('Sensitivity = %.4f\n', Sensitivity);
+fprintf('Specificity = %.4f\n', Specificity);
+fprintf('positive predictive value = %.4f\n', PPV);
+fprintf('negative predictive value = %.4f\n', PNV);
