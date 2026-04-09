@@ -5,7 +5,6 @@ ann=rdann('Data/107','atr');                              % read the annotationa
 figure;
 subplot(2,1,1);
 plot(tm,signal);                                        % Visualize the signal;
-xlim([0 1810]);
 xlabel('Time(second)');                                    
 ylabel('Amplitude');
 title('MITDB ECG.Patient 107');
@@ -54,7 +53,7 @@ save('IntermediateSignals/C_Removing_DC_signal','DC_remove_signal','fs','tm','an
 fprintf(' After Removing DC signal ECG SNR: %0.2f dB\n', SNR_DC_remove);             % to display the signal to noise ratio
 %% 3.3 Applying Band Pass Filter at HPF(5Hz) and LPF (15Hz)
 order=10;              %assiging filter order as 10
-final_signal=bandpass(5, 1,0, order, Processed_signal);                              %using as highpass filter (5Hz)
+final_signal=bandpass(5, 1,0, order, DC_remove_signal);                              %using as highpass filter (5Hz)
 final_signal=bandpass(15, 0,1, order, final_signal);                                 %using as lowpass filter (15Hz)
 Myfft(final_signal,fs, 'Double sided Amplitude Spectrum after applying Band Pass Filter HPF(5Hz) and LPF(15Hz)', 'Single sided Amplitude Spectrum after applying band pass filter HPF(5Hz) and LPF (15Hz)');
 
@@ -68,7 +67,6 @@ fprintf(' After applying bandpass filter ECG SNR: %0.2f dB\n', SNR_BPF);        
 figure;
 subplot(2,1,1);
 plot(tm,final_signal);
-xlim([0 1810]);
 xlabel('Time(second)');                                    
 ylabel('Amplitude');
 title('Signal after preprocessing');
