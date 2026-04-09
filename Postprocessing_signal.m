@@ -31,37 +31,45 @@ xlabel('Time (s)');
 ylabel('Amplitude');
 title('QRS Detection Result Zoomed image');
 
-%% 2 Calculating True positive (TP), false positive (FP)  and false negative (FN)
+%% 2. Calculating TP, FP, FN and TN (Window-based method)
 
-true_peaks = ann;     % ground truth
-detected_peaks = lks; % your detected peaks
+matchTolerance_sec = 0.15;                       % 150 ms
+matchTolerance_samples = round(matchTolerance_sec * fs);
 
-tolerance = round(0.15 * fs);   % 150 ms tolerance
+matchedReference = false(length(ann),1);             %ann=true annotation
+matchedDetected  = false(length(lks),1);             %lks=detected annotation
 
 TP = 0;
 
-matched = zeros(length(true_peaks),1);                                     %make a zero matrix of dimension truepeaklength x 1
-
-% To detect true positive
-for i = 1:length(detected_peaks)
-    d = detected_peaks(i);
+% For Matching
+for i = 1:length(lks)
     
-    % find closest annotation
-    diff = abs(true_peaks - d);
-    [min_diff, idx] = min(diff);
+    diff = abs(ann - lks(i));
+    [minDiff, idx] = min(diff);
     
-    if min_diff <= tolerance && matched(idx) == 0
-        TP = TP + 1;                       %increase the count if detected qrs matches doctor annotation
-        matched(idx) = 1;                  % mark as matched
+    if minDiff <= matchTolerance_samples && ~matchedReference(idx)
+        TP = TP + 1;                                                 %if detected anotation matches true annotation increase the count
+        matchedReference(idx) = true;
+        matchedDetected(i) = true;
     end
 end
 
-FP=length(detected_peaks)-TP;               % false positive= number of qrs detected -true positive
-FN=length(true_peaks)-TP;                   % false negative= number of annotation - true positive
-Total_samples = length(final_signal);             % to get total samples
-TN = Total_samples - TP - FP - FN;          % total sample= TP+TN+FP+FN
+
+%FP = sum(~matchedDetected);
+%FN = sum(~matchedReference);
+
+FP=length(lks)-TP;                             %to detect false positive
+FN=length(ann)-TP;                             %to detect false negative
+
+
+windowSize_sec = 0.2;                         % 200 ms window
+totalWindows = floor(tm(end) / windowSize_sec); %calculate totalWindows
+
+TN = totalWindows - (TP + FP + FN);
+
 %% 3. Calculating Sensitivity, Specificity, positive predictive value or the negative predictive value
 
+Accuracy= ( TP + TN )/totalWindows;
 Sensitivity = TP / (TP + FN);
 Specificity = TN / (TN + FP);
 PPV = TP / (TP + FP);
@@ -72,6 +80,7 @@ fprintf('TP = %d\n', TP);
 fprintf('FP = %d\n', FP);
 fprintf('FN = %d\n', FN);
 fprintf('TN = %d\n', TN);
+fprintf('Accuracy = %.4f\n', Accuracy);
 fprintf('Sensitivity = %.4f\n', Sensitivity);
 fprintf('Specificity = %.4f\n', Specificity);
 fprintf('positive predictive value = %.4f\n', PPV);

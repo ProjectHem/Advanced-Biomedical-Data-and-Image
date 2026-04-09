@@ -4,13 +4,13 @@
 load('IntermediateSignals/D_BandPass_filter_result.mat');
 [pks, lks] = findpeaks(final_signal, 'MinPeakDistance', 224);
 figure;
-su
+subplot(2,1,1);
 plot(tm, final_signal);                                                       % signal
 hold on
 plot(tm(ann), final_signal(ann), 'k*');                                       % ground truth displayed with black *
 plot(tm(lks), final_signal(lks), 'r*');                                       % detected peaks displayed with red *
 hold off
-%xlim([0 30]);
+%xlim([0 30])
 
 legend('Filtered Signal', 'Ground Truth (Downloaded Annotation)', 'Detected R-peaks');
 
@@ -18,35 +18,60 @@ xlabel('Time (s)');
 ylabel('Amplitude');
 title('QRS Detection Result');
 
-%% 2 Calculating True positive (TP), false positive (FP)  and false negative (FN)
+subplot(2,1,2);
+plot(tm, final_signal);                                                       % signal
+hold on
+plot(tm(ann), final_signal(ann), 'k*');                                       % ground truth displayed with black *
+plot(tm(lks), final_signal(lks), 'r*');                                       % detected peaks displayed with red *
+hold off
+xlim([0 30]);
+legend('Filtered Signal', 'Ground Truth (Downloaded Annotation)', 'Detected R-peaks');
 
-true_peaks = ann;     % ground truth
-detected_peaks = lks; % your detected peaks
+xlabel('Time (s)');
+ylabel('Amplitude');
+title('QRS Detection Result Zoomed image');
 
-tolerance = round(0.15 * fs);   % 150 ms tolerance
+%% 6 Calculating TP, FP, FN and TN (Window-based method)
+
+refBeatSamples = ann;     % ground truth
+rPeakLocs = lks;          % detected peaks
+
+matchTolerance_sec = 0.15;                       % 150 ms
+matchTolerance_samples = round(matchTolerance_sec * fs);
+
+matchedReference = false(length(ann),1);             %ann=true annotation
+matchedDetected  = false(length(lks),1);             %lks 
 
 TP = 0;
 
-matched = zeros(length(true_peaks),1);                                     %make a zero matrix of dimension truepeaklength x 1
-
-% To detect true positive
-for i = 1:length(detected_peaks)
-    d = detected_peaks(i);
+% ---- Matching ----
+for i = 1:length(lks)
     
-    % find closest annotation
-    diff = abs(true_peaks - d);
-    [min_diff, idx] = min(diff);
+    diff = abs(ann - lks(i));
+    [minDiff, idx] = min(diff);
     
-    if min_diff <= tolerance && matched(idx) == 0
-        TP = TP + 1;                       %increase the count if detected qrs matches doctor annotation
-        matched(idx) = 1;                  % mark as matched
+    if minDiff <= matchTolerance_samples && ~matchedReference(idx)
+        TP = TP + 1;
+        matchedReference(idx) = true;
+        matchedDetected(i) = true;
     end
 end
+%fprintf("%d", TP);
 
-FP=length(detected_peaks)-TP;               % false positive= number of qrs detected -true positive
-FN=length(true_peaks)-TP;                   % false negative= number of annotation - true positive
-Total_samples = length(final_signal)             % to get total samples
-TN = Total_samples - TP - FP - FN;          % total sample= TP+TN+FP+FN
+% ---- FP and FN ----
+%FP = sum(~matchedDetected);
+%FN = sum(~matchedReference);
+FP=length(lks)-TP;
+FN=length(ann)-TP;
+% ---- TN (Windowing method) ----
+windowSize_sec = 0.2;                         % 200 ms window
+totalWindows = floor(tm(end) / windowSize_sec);
+
+TN = totalWindows - (TP + FP + FN);
+%TN = max(0, TN);                              % safety
+
+
+
 %% 3. Calculating Sensitivity, Specificity, positive predictive value or the negative predictive value
 
 Sensitivity = TP / (TP + FN);
