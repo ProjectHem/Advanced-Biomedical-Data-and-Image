@@ -3,14 +3,22 @@
 [signal, fs, tm] = rdsamp('Data/107',1);                  % read dataset 107 channel 1
 ann=rdann('Data/107','atr');                              % read the annotationann = rdann('107','atr');
 figure;
-plot(tm,signal);                                        % Visualize the signal
-%hold on;
-%plot(tm(ann), signal(ann), 'r*');             % to display the annotations with red stars
-%hold off;
-%xlim([50 100]);
+subplot(2,1,1);
+plot(tm,signal);                                        % Visualize the signal;
+xlim([0 1810]);
 xlabel('Time(second)');                                    
 ylabel('Amplitude');
 title('MITDB ECG.Patient 107');
+%save('IntermediateSignals/A_Patient_107','signal','fs','tm','ann'); % saves file inside IntermediateSignals folder
+%[SNR_Raw]=SNR_from_spectrum(signal,fs);            % to find the signal to noise ratio of original signal
+%fprintf('Raw ECG SNR: %0.2f dB\n', SNR_Raw);             % to display the signal to noise ratio
+
+subplot(2,1,2);
+plot(tm,signal);                                        % Visualize the signal;
+xlim([0 30]);
+xlabel('Time(second)');                                    
+ylabel('Amplitude');
+title('MITDB ECG.Patient 107 Zoomed Image');
 save('IntermediateSignals/A_Patient_107','signal','fs','tm','ann'); % saves file inside IntermediateSignals folder
 [SNR_Raw]=SNR_from_spectrum(signal,fs);            % to find the signal to noise ratio of original signal
 fprintf('Raw ECG SNR: %0.2f dB\n', SNR_Raw);             % to display the signal to noise ratio
@@ -58,7 +66,15 @@ fprintf(' After applying bandpass filter ECG SNR: %0.2f dB\n', SNR_BPF);        
 %% 4 Displaying the Processed Signal 
 
 figure;
+subplot(2,1,1);
 plot(tm,final_signal);
+xlim([0 1810]);
 xlabel('Time(second)');                                    
 ylabel('Amplitude');
 title('Signal after preprocessing');
+subplot(2,1,2);
+plot(tm,final_signal);
+xlim([0 30]);
+xlabel('Time(second)');                                    
+ylabel('Amplitude');
+title('Zoomed Signal after preprocessing');

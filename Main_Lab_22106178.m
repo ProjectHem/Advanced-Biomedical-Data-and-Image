@@ -4,14 +4,21 @@ close all; clear                                                                
 [signal, fs, tm] = rdsamp('Data/107',1);                  % read dataset 107 channel 1
 ann=rdann('Data/107','atr');                              % read the annotationann = rdann('107','atr');
 figure;
-plot(tm,signal);                                        % Visualize the signal
-%hold on;
-%plot(tm(ann), signal(ann), 'r*');             % to display the annotations with red stars
-%hold off;
-%xlim([50 100]);
+subplot(2,1,1);
+plot(tm,signal);                                        % Visualize the signal;
 xlabel('Time(second)');                                    
 ylabel('Amplitude');
 title('MITDB ECG.Patient 107');
+%save('IntermediateSignals/A_Patient_107','signal','fs','tm','ann'); % saves file inside IntermediateSignals folder
+%[SNR_Raw]=SNR_from_spectrum(signal,fs);            % to find the signal to noise ratio of original signal
+%fprintf('Raw ECG SNR: %0.2f dB\n', SNR_Raw);             % to display the signal to noise ratio
+
+subplot(2,1,2);
+plot(tm,signal);                                        % Visualize the signal;
+xlim([0 55]);
+xlabel('Time(second)');                                    
+ylabel('Amplitude');
+title('MITDB ECG.Patient 107 Zoomed Image');
 save('IntermediateSignals/A_Patient_107','signal','fs','tm','ann'); % saves file inside IntermediateSignals folder
 [SNR_Raw]=SNR_from_spectrum(signal,fs);            % to find the signal to noise ratio of original signal
 fprintf('Raw ECG SNR: %0.2f dB\n', SNR_Raw);             % to display the signal to noise ratio
@@ -59,16 +66,24 @@ fprintf(' After applying bandpass filter ECG SNR: %0.2f dB\n', SNR_BPF);        
 %% 4 Displaying the Processed Signal 
 
 figure;
+subplot(2,1,1);
 plot(tm,final_signal);
 xlabel('Time(second)');                                    
 ylabel('Amplitude');
 title('Signal after preprocessing');
+subplot(2,1,2);
+plot(tm,final_signal);
+xlim([0 55]);
+xlabel('Time(second)');                                    
+ylabel('Amplitude');
+title('Zoomed Signal after preprocessing');
 
 %% 5 Postprocessing
 
 %To find the R peak
 [pks, lks] = findpeaks(final_signal, 'MinPeakDistance', 224);
 figure;
+subplot(2,1,1);
 plot(tm, final_signal);                                                       % signal
 hold on
 plot(tm(ann), final_signal(ann), 'k*');                                       % ground truth displayed with black *
@@ -81,6 +96,20 @@ legend('Filtered Signal', 'Ground Truth (Downloaded Annotation)', 'Detected R-pe
 xlabel('Time (s)');
 ylabel('Amplitude');
 title('QRS Detection Result');
+
+subplot(2,1,2);
+plot(tm, final_signal);                                                       % signal
+hold on
+plot(tm(ann), final_signal(ann), 'k*');                                       % ground truth displayed with black *
+plot(tm(lks), final_signal(lks), 'r*');                                       % detected peaks displayed with red *
+hold off
+xlim([0 30]);
+legend('Filtered Signal', 'Ground Truth (Downloaded Annotation)', 'Detected R-peaks');
+
+xlabel('Time (s)');
+ylabel('Amplitude');
+title('QRS Detection Result Zoomed image');
+
 
 %% 6 Calculating True positive (TP), false positive (FP)  and false negative (FN)
 

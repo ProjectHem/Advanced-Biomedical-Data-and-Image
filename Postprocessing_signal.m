@@ -4,6 +4,7 @@
 load('IntermediateSignals/D_BandPass_filter_result.mat');
 [pks, lks] = findpeaks(final_signal, 'MinPeakDistance', 224);
 figure;
+subplot(2,1,1);
 plot(tm, final_signal);                                                       % signal
 hold on
 plot(tm(ann), final_signal(ann), 'k*');                                       % ground truth displayed with black *
@@ -16,6 +17,19 @@ legend('Filtered Signal', 'Ground Truth (Downloaded Annotation)', 'Detected R-pe
 xlabel('Time (s)');
 ylabel('Amplitude');
 title('QRS Detection Result');
+
+subplot(2,1,2);
+plot(tm, final_signal);                                                       % signal
+hold on
+plot(tm(ann), final_signal(ann), 'k*');                                       % ground truth displayed with black *
+plot(tm(lks), final_signal(lks), 'r*');                                       % detected peaks displayed with red *
+hold off
+xlim([0 30]);
+legend('Filtered Signal', 'Ground Truth (Downloaded Annotation)', 'Detected R-peaks');
+
+xlabel('Time (s)');
+ylabel('Amplitude');
+title('QRS Detection Result Zoomed image');
 
 %% 2 Calculating True positive (TP), false positive (FP)  and false negative (FN)
 
