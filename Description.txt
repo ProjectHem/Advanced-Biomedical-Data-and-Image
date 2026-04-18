@@ -24,4 +24,6 @@ SNR_from_spectrum.m: A function to calculate the Signal to noise ratio in dB
 
 Data folder: Stores the downloaded data and annotations
 
+pan_tompkin.m: uses pantompkin method to detect r-peak
+
 IntermediateSignals folder: Stores all the processed signals

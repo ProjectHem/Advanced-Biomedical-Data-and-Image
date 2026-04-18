@@ -30,22 +30,22 @@ Myfft(signal, fs, 'ECG Double-Sided Amplitude Spectrum', 'ECG Single-Sided Ampli
 
 %% 3.1 Removeing powerline noises at frequency 60Hz, 120Hz and 180Hz using IIR Notch Filter
 Qf=10;                                                % let Quality factor=10
-Processed_signal = notch(60,fs,Qf,signal, 'Frequency Response of the notch filter at 60 Hz');          % remove frequency 60 Hz using IIR Notch Filter
-Myfft(Processed_signal,fs, 'Double sided Amplitude Spectrum after 60 Hz notch filter','Single sided Amplitude Spectrum after 60 Hz notch filter', 58,62);
+Processed_signal_60 = notch(60,fs,Qf,signal, 'Frequency Response of the notch filter at 60 Hz');          % remove frequency 60 Hz using IIR Notch Filter
+Myfft(Processed_signal_60,fs, 'Double sided Amplitude Spectrum after 60 Hz notch filter','Single sided Amplitude Spectrum after 60 Hz notch filter', 58,62);
 
-Processed_signal = notch(120,fs,Qf,Processed_signal, 'Frequency Response of the notch filter at 120 Hz');          % remove frequency 60 Hz using IIR Notch Filter
-Myfft(Processed_signal,fs, 'Double sided Amplitude Spectrum after 60 Hz and 120 HZ notch filter','Single sided Amplitude Spectrum after 60 Hz and 120 Hz notch filter',118,122);
+Processed_signal_120 = notch(120,fs,Qf,Processed_signal_60, 'Frequency Response of the notch filter at 120 Hz');          % remove frequency 60 Hz using IIR Notch Filter
+Myfft(Processed_signal_120,fs, 'Double sided Amplitude Spectrum after 60 Hz and 120 HZ notch filter','Single sided Amplitude Spectrum after 60 Hz and 120 Hz notch filter',118,122);
 
-Processed_signal = notch(180,fs,Qf,Processed_signal, 'Frequency Response of the notch filter at 180 Hz');          % remove frequency 60 Hz using IIR Notch Filter
-Myfft(Processed_signal,fs, 'Double sided Amplitude Spectrum after 60Hz, 120Hz and 180HZ notch filter','Single sided Amplitude Spectrum after 60Hz, 120Hz and 180 Hz notch filter',178,182);
+Processed_signal_180 = notch(180,fs,Qf,Processed_signal_120, 'Frequency Response of the notch filter at 180 Hz');          % remove frequency 60 Hz using IIR Notch Filter
+Myfft(Processed_signal_180,fs, 'Double sided Amplitude Spectrum after 60Hz, 120Hz and 180HZ notch filter','Single sided Amplitude Spectrum after 60Hz, 120Hz and 180 Hz notch filter',178,182);
 
-save('IntermediateSignals/B_Notch_filter_result','Processed_signal','fs','tm','ann');
+save('IntermediateSignals/B_Notch_filter_result','Processed_signal_180','fs','tm','ann');
 
-[SNR_180]=SNR_from_spectrum(Processed_signal,fs);    % to display the signal to noise ratio after applying Notch Filter
+[SNR_180]=SNR_from_spectrum(Processed_signal_180,fs);    % to display the signal to noise ratio after applying Notch Filter
 fprintf(' After Removing powerline noises ECG SNR: %0.2f dB\n', SNR_180);             % to display the signal to noise ratio
 %% 3.2 Removing DC Signal and Baseline wandeing using high passfilter
 lamda=0.98;
-DC_remove_signal = Remove_the_DC(Processed_signal, lamda);         
+DC_remove_signal = Remove_the_DC(Processed_signal_180, lamda);         
 Myfft(DC_remove_signal,fs, 'Double sided Amplitude Spectrum after removing DC noise','Single sided Amplitude Spectrum after removing DC noise');
 
 save('IntermediateSignals/C_Removing_DC_signal','DC_remove_signal','fs','tm','ann');
@@ -80,48 +80,53 @@ title('Zoomed Signal after preprocessing');
 
 %% 5 Postprocessing
 
-%To find the R peak
-[pks, lks] = findpeaks(final_signal, 'MinPeakDistance', 224);
+[pks, lks] = findpeaks(final_signal, 'MinPeakDistance', 224,'MinPeakProminence',.00001); %finding R_peak
+%% 6 Comparition to pan tompkins
+[~,r_peaks,~]=pan_tompkin(final_signal,fs,0);   %finding peak using pantompkins method
+
+%% 7 Displaying Result
+
 figure;
 subplot(2,1,1);
-plot(tm, final_signal);                                                       % signal
+plot(tm, final_signal);                                                       % plotting processed signal vs tm
 hold on
 plot(tm(ann), final_signal(ann), 'k*');                                       % ground truth displayed with black *
 plot(tm(lks), final_signal(lks), 'r*');                                       % detected peaks displayed with red *
+plot(tm(r_peaks), final_signal(r_peaks), 'g*');                                 % pan tompkins peak displayed with green *
 hold off
-%xlim([0 30])
 
-legend('Filtered Signal', 'Ground Truth (Downloaded Annotation)', 'Detected R-peaks');
+legend('Filtered Signal', 'Ground Truth (Doctors Annotation)', 'Detected R-peaks', 'Pan-Tompkin Methods');
 
 xlabel('Time (s)');
 ylabel('Amplitude');
 title('QRS Detection Result');
 
+%figure;
 subplot(2,1,2);
-plot(tm, final_signal);                                                       % signal
+plot(tm, final_signal);                                                       % plotting processed signal vs tm
 hold on
 plot(tm(ann), final_signal(ann), 'k*');                                       % ground truth displayed with black *
 plot(tm(lks), final_signal(lks), 'r*');                                       % detected peaks displayed with red *
+plot(tm(r_peaks), final_signal(r_peaks), 'g*');                                 % pan tompkins peak displayed with green *
 hold off
 xlim([0 30]);
-legend('Filtered Signal', 'Ground Truth (Downloaded Annotation)', 'Detected R-peaks');
+legend('Filtered Signal', 'Ground Truth (Doctors Annotation)', 'Detected R-peaks', 'Pan-Tomkins');
 
 xlabel('Time (s)');
 ylabel('Amplitude');
 title('QRS Detection Result Zoomed image');
-
-
-%% 6 Calculating TP, FP, FN and TN (Window-based method)
+%% 8. Calculating TP, FP, FN and TN (Window-based method)
 
 matchTolerance_sec = 0.15;                       % 150 ms
-matchTolerance_samples = round(matchTolerance_sec * fs);
+matchTolerance_samples = round(matchTolerance_sec * fs);                   %Match each detected peak to the nearest true reference beat
 
-matchedReference = false(length(ann),1);             %ann=true annotation
-matchedDetected  = false(length(lks),1);             %lks=detected annotation
-
+matchedReference = false(length(ann),1);                                   %ann=true annotation
+matchedDetected  = false(length(lks),1);                                   %lks=detected annotation
+matchedReference2 = false(length(ann),1);                                   %ann=true annotation
+matchedDetected2  = false(length(r_peaks),1);                                   %r_peaks=detected annotation by pan tompkins method
 TP = 0;
-
-% For Matching
+TP2 = 0;
+% To find TP TN FP and FN for detected peak
 for i = 1:length(lks)
     
     diff = abs(ann - lks(i));
@@ -146,20 +151,64 @@ windowSize_sec = 0.2;                         % 200 ms window
 totalWindows = floor(tm(end) / windowSize_sec); %calculate totalWindows
 
 TN = totalWindows - (TP + FP + FN);
-%% 7. Calculating Sensitivity, Specificity, positive predictive value or the negative predictive value
+
+% % To find TP TN FP and FN for detected peak using pan-tompkins method
+for i = 1:length(r_peaks)
+    
+    diff = abs(ann - r_peaks(i));
+    [minDiff2, idx2] = min(diff);
+    
+    if minDiff2 <= matchTolerance_samples && ~matchedReference2(idx2)
+        TP2 = TP2 + 1;                                                 %if detected anotation matches true annotation increase the count
+        matchedReference2(idx2) = true;
+        matchedDetected2(i) = true;
+    end
+end
+
+
+%FP = sum(~matchedDetected);
+%FN = sum(~matchedReference);
+
+FP2=length(r_peaks)-TP2;                             %to detect false positive
+FN2=length(ann)-TP2;                             %to detect false negative
+
+
+%windowSize_sec = 0.2;                         % 200 ms window
+%totalWindows = floor(tm(end) / windowSize_sec); %calculate totalWindows
+
+TN2 = totalWindows - (TP2 + FP2 + FN2);
+
+%% 9. Calculating Sensitivity, Specificity, positive predictive value or the negative predictive value
+
 Accuracy= ( TP + TN )/totalWindows;
 Sensitivity = TP / (TP + FN);
 Specificity = TN / (TN + FP);
 PPV = TP / (TP + FP);
 PNV = TN/ (TN + FN);
-%% 8. Displaying the results
-fprintf('\n--- Performance ---\n');
-fprintf('TP = %d\n', TP);
-fprintf('FP = %d\n', FP);
-fprintf('FN = %d\n', FN);
-fprintf('TN = %d\n', TN);
-fprintf('Accuracy = %.4f\n', Accuracy);
-fprintf('Sensitivity = %.4f\n', Sensitivity);
-fprintf('Specificity = %.4f\n', Specificity);
-fprintf('positive predictive value = %.4f\n', PPV);
-fprintf('negative predictive value = %.4f\n', PNV);
+
+Accuracy2= ( TP2 + TN2 )/totalWindows;
+Sensitivity2 = TP2 / (TP2 + FN2);
+Specificity2 = TN2 / (TN2 + FP2);
+PPV2 = TP2 / (TP2 + FP2);
+PNV2 = TN2/ (TN2 + FN2);
+%% 10. Displaying the results
+fprintf('\n--- Performance and Comparision ---\n');
+Method = {'Applied Method'; 'Pan-Tompkins Method'; 'Difference'};
+
+TP = [TP; TP2; abs(TP-TP2)];
+FP = [FP; FP2; abs(FP-FP2)];
+FN = [FN; FN2; abs(FN-FN2)];
+TN = [TN; TN2; abs(TN-TN2)];
+
+Accuracy = [Accuracy; Accuracy2; abs(Accuracy-Accuracy2)];
+Sensitivity = [Sensitivity; Sensitivity2; abs(Sensitivity-Sensitivity2)];
+Specificity = [Specificity; Specificity2; abs(Specificity-Specificity2)];
+PPV = [PPV; PPV2; abs(PPV-PPV2)];
+NPV = [PNV; PNV2; abs(PNV-PNV2)];
+
+ResultsTable = table(Method, TP, FP, FN, TN, ...
+    Accuracy, Sensitivity, Specificity, PPV, NPV);
+
+disp(ResultsTable);
+%% 11 save workspace
+save('Workspace/Workspace_22106178.mat');

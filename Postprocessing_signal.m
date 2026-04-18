@@ -2,16 +2,20 @@
 
 %To find the R peak
 load('IntermediateSignals/D_BandPass_filter_result.mat');
-[pks, lks] = findpeaks(final_signal, 'MinPeakDistance', 224);
+[pks, lks] = findpeaks(final_signal, 'MinPeakDistance', 224,'MinPeakProminence',.00001);     % To find r-peak
+
+[~,r_peaks,~]=pan_tompkin(final_signal,fs,0);                                                % To find r-peak using pan tompkins method
+%% 2 Displaying Result
 figure;
 %subplot(2,1,1);
-plot(tm, final_signal);                                                       % signa
+plot(tm, final_signal);                                                       % plotting processed signal vs tm
 hold on
 plot(tm(ann), final_signal(ann), 'k*');                                       % ground truth displayed with black *
 plot(tm(lks), final_signal(lks), 'r*');                                       % detected peaks displayed with red *
+plot(tm(r_peaks), final_signal(r_peaks), 'g*');                                 % pan tomkins peak displayed with green *
 hold off
 
-legend('Filtered Signal', 'Ground Truth (Downloaded Annotation)', 'Detected R-peaks');
+legend('Filtered Signal', 'Ground Truth (Doctors Annotation)', 'Detected R-peaks', 'Pan-Tomkins Methods');
 
 xlabel('Time (s)');
 ylabel('Amplitude');
@@ -19,29 +23,30 @@ title('QRS Detection Result');
 
 figure;
 %subplot(2,1,2);
-plot(tm, final_signal);                                                       % signal
+plot(tm, final_signal);                                                       % plotting processed signal vs tm
 hold on
 plot(tm(ann), final_signal(ann), 'k*');                                       % ground truth displayed with black *
 plot(tm(lks), final_signal(lks), 'r*');                                       % detected peaks displayed with red *
+plot(tm(r_peaks), final_signal(r_peaks), 'g*');                                 % pan tompkins peak displayed with green *
 hold off
 xlim([0 30]);
-legend('Filtered Signal', 'Ground Truth (Downloaded Annotation)', 'Detected R-peaks');
+legend('Filtered Signal', 'Ground Truth (Doctors Annotation)', 'Detected R-peaks', 'Pan-Tompkins');
 
 xlabel('Time (s)');
 ylabel('Amplitude');
 title('QRS Detection Result Zoomed image');
-
-%% 2. Calculating TP, FP, FN and TN (Window-based method)
+%% 3. Calculating TP, FP, FN and TN (Window-based method)
 
 matchTolerance_sec = 0.15;                       % 150 ms
-matchTolerance_samples = round(matchTolerance_sec * fs);
+matchTolerance_samples = round(matchTolerance_sec * fs);                   %Match each detected peak to the nearest true reference beat
 
-matchedReference = false(length(ann),1);             %ann=true annotation
-matchedDetected  = false(length(lks),1);             %lks=detected annotation
-
+matchedReference = false(length(ann),1);                                   %ann=true annotation
+matchedDetected  = false(length(lks),1);                                   %lks=detected annotation
+matchedReference2 = false(length(ann),1);                                   %ann=true annotation
+matchedDetected2  = false(length(r_peaks),1);                                   %r_peaks=detected annotation by pan tomkins method
 TP = 0;
-
-% For Matching
+TP2 = 0;
+% To find TP TN FP and FN for detected peak
 for i = 1:length(lks)
     
     diff = abs(ann - lks(i));
@@ -67,21 +72,70 @@ totalWindows = floor(tm(end) / windowSize_sec); %calculate totalWindows
 
 TN = totalWindows - (TP + FP + FN);
 
-%% 3. Calculating Sensitivity, Specificity, positive predictive value or the negative predictive value
+% % To find TP TN FP and FN for detected peak using pan-tomkins method
+for i = 1:length(r_peaks)
+    
+    diff = abs(ann - r_peaks(i));
+    [minDiff2, idx2] = min(diff);
+    
+    if minDiff2 <= matchTolerance_samples && ~matchedReference2(idx2)
+        TP2 = TP2 + 1;                                                 %if detected anotation matches true annotation increase the count
+        matchedReference2(idx2) = true;
+        matchedDetected2(i) = true;
+    end
+end
+
+
+%FP = sum(~matchedDetected);
+%FN = sum(~matchedReference);
+
+FP2=length(r_peaks)-TP2;                             %to detect false positive
+FN2=length(ann)-TP2;                             %to detect false negative
+
+
+%windowSize_sec = 0.2;                         % 200 ms window
+%totalWindows = floor(tm(end) / windowSize_sec); %calculate totalWindows
+
+TN2 = totalWindows - (TP2 + FP2 + FN2);
+
+%% 4. Calculating Sensitivity, Specificity, positive predictive value or the negative predictive value
 
 Accuracy= ( TP + TN )/totalWindows;
 Sensitivity = TP / (TP + FN);
 Specificity = TN / (TN + FP);
 PPV = TP / (TP + FP);
 PNV = TN/ (TN + FN);
-%% 4. Displaying the results
-fprintf('\n--- Performance ---\n');
-fprintf('TP = %d\n', TP);
-fprintf('FP = %d\n', FP);
-fprintf('FN = %d\n', FN);
-fprintf('TN = %d\n', TN);
-fprintf('Accuracy = %.4f\n', Accuracy);
-fprintf('Sensitivity = %.4f\n', Sensitivity);
-fprintf('Specificity = %.4f\n', Specificity);
-fprintf('positive predictive value = %.4f\n', PPV);
-fprintf('negative predictive value = %.4f\n', PNV);
+
+Accuracy2= ( TP2 + TN2 )/totalWindows;
+Sensitivity2 = TP2 / (TP2 + FN2);
+Specificity2 = TN2 / (TN2 + FP2);
+PPV2 = TP2 / (TP2 + FP2);
+PNV2 = TN2/ (TN2 + FN2);
+%% 5. Displaying the results
+fprintf('\n--- Performance and Comparision ---\n');
+Method = {'Applied Method'; 'Pan-Tompkins Method'; 'Difference'};
+
+TP = [TP; TP2; abs(TP-TP2)];
+FP = [FP; FP2; abs(FP-FP2)];
+FN = [FN; FN2; abs(FN-FN2)];
+TN = [TN; TN2; abs(TN-TN2)];
+
+Accuracy = [Accuracy; Accuracy2; abs(Accuracy-Accuracy2)];
+Sensitivity = [Sensitivity; Sensitivity2; abs(Sensitivity-Sensitivity2)];
+Specificity = [Specificity; Specificity2; abs(Specificity-Specificity2)];
+PPV = [PPV; PPV2; abs(PPV-PPV2)];
+NPV = [PNV; PNV2; abs(PNV-PNV2)];
+
+ResultsTable = table(Method, TP, FP, FN, TN, ...
+    Accuracy, Sensitivity, Specificity, PPV, NPV);
+
+disp(ResultsTable);
+% fprintf('TP Detected= %d & TP(pan-tompkins method)= %d\n', TP, TP2);
+% fprintf('FP Detected= %d & FP(pan-tompkins method)= %d\n', FP, FP2);
+% fprintf('FN Detected= %d & FN(pan-tompkins method)=%d\n', FN, FN2);
+% fprintf('TN Detected= %d & TN(pan-tompkins method)=%d\n', TN, TN2);
+% fprintf('Accuracy Detected= %.4f & Accuracy(pan-tompkins method)=%.4f\n', Accuracy, Accuracy2);
+% fprintf('Sensitivity Detected= %.4f & Sensitivity (pan-tompkins method)=%.4f\n', Sensitivity, Sensitivity2);
+% fprintf('Specificity = %.4f & Specificity(pan-tompkins method)=%.4f\n', Specificity, Specificity2);
+% fprintf('positive predictive value = %.4f & positive predictive value(pan-tompkins method)=%.4f\n', PPV, PPV2);
+% fprintf('negative predictive value = %.4f & negative predictive value(pan-tompkins method)=%.4f\n', PNV, PNV2);

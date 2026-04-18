@@ -29,22 +29,22 @@ Myfft(signal, fs, 'ECG Double-Sided Amplitude Spectrum', 'ECG Single-Sided Ampli
 
 %% 3.1 Removeing powerline noises at frequency 60Hz, 120Hz and 180Hz using IIR Notch Filter
 Qf=10;                                                % let Quality factor=10
-Processed_signal = notch(60,fs,Qf,signal, 'Frequency Response of the notch filter at 60 Hz');          % remove frequency 60 Hz using IIR Notch Filter
-Myfft(Processed_signal,fs, 'Double sided Amplitude Spectrum after 60 Hz notch filter','Single sided Amplitude Spectrum after 60 Hz notch filter', 58,62);
+Processed_signal_60 = notch(60,fs,Qf,signal, 'Frequency Response of the notch filter at 60 Hz');          % remove frequency 60 Hz using IIR Notch Filter
+Myfft(Processed_signal_60,fs, 'Double sided Amplitude Spectrum after 60 Hz notch filter','Single sided Amplitude Spectrum after 60 Hz notch filter', 58,62);
 
-Processed_signal = notch(120,fs,Qf,Processed_signal, 'Frequency Response of the notch filter at 120 Hz');          % remove frequency 60 Hz using IIR Notch Filter
-Myfft(Processed_signal,fs, 'Double sided Amplitude Spectrum after 60 Hz and 120 HZ notch filter','Single sided Amplitude Spectrum after 60 Hz and 120 Hz notch filter',118,122);
+Processed_signal_120 = notch(120,fs,Qf,Processed_signal_60, 'Frequency Response of the notch filter at 120 Hz');          % remove frequency 60 Hz using IIR Notch Filter
+Myfft(Processed_signal_120,fs, 'Double sided Amplitude Spectrum after 60 Hz and 120 HZ notch filter','Single sided Amplitude Spectrum after 60 Hz and 120 Hz notch filter',118,122);
 
-Processed_signal = notch(180,fs,Qf,Processed_signal, 'Frequency Response of the notch filter at 180 Hz');          % remove frequency 60 Hz using IIR Notch Filter
-Myfft(Processed_signal,fs, 'Double sided Amplitude Spectrum after 60Hz, 120Hz and 180HZ notch filter','Single sided Amplitude Spectrum after 60Hz, 120Hz and 180 Hz notch filter',178,182);
+Processed_signal_180 = notch(180,fs,Qf,Processed_signal_120, 'Frequency Response of the notch filter at 180 Hz');          % remove frequency 60 Hz using IIR Notch Filter
+Myfft(Processed_signal_180,fs, 'Double sided Amplitude Spectrum after 60Hz, 120Hz and 180HZ notch filter','Single sided Amplitude Spectrum after 60Hz, 120Hz and 180 Hz notch filter',178,182);
 
-save('IntermediateSignals/B_Notch_filter_result','Processed_signal','fs','tm','ann');
+save('IntermediateSignals/B_Notch_filter_result','Processed_signal_180','fs','tm','ann');
 
-[SNR_180]=SNR_from_spectrum(Processed_signal,fs);    % to display the signal to noise ratio after applying Notch Filter
+[SNR_180]=SNR_from_spectrum(Processed_signal_180,fs);    % to display the signal to noise ratio after applying Notch Filter
 fprintf(' After Removing powerline noises ECG SNR: %0.2f dB\n', SNR_180);             % to display the signal to noise ratio
 %% 3.2 Removing DC Signal and Baseline wandeing using high passfilter
 lamda=0.98;
-DC_remove_signal = Remove_the_DC(Processed_signal, lamda);         
+DC_remove_signal = Remove_the_DC(Processed_signal_180, lamda);         
 Myfft(DC_remove_signal,fs, 'Double sided Amplitude Spectrum after removing DC noise','Single sided Amplitude Spectrum after removing DC noise');
 
 save('IntermediateSignals/C_Removing_DC_signal','DC_remove_signal','fs','tm','ann');
